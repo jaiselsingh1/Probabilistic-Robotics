@@ -42,7 +42,7 @@ class DroneKF:
         return G 
 
     def C_matrix(self, time_step = default_time_step):
-        C = np.array([1, 0]) # since we only measure the altitude and not velocity 
+        C = np.array([[1, 0]]) # since we only measure the altitude and not velocity 
         return C 
     
     # KF prediction step
@@ -52,14 +52,15 @@ class DroneKF:
         delta_t = time_stamp - self.time 
         time_stamp = self.time 
 
-        u = np.array([thrust])
-        sigma_u = np.array([self.thrust_var])
-        Q = B @ sigma_u @ B.T
 
         A = self.A_matrix(delta_t)
         B = self.B_matrix(delta_t)
         C = self.C_matrix(delta_t)
         G = self.G_vector(delta_t)
+
+        u = np.array([thrust])
+        sigma_u = np.array([self.thrust_var])
+        Q = B @ sigma_u @ B.T
 
         # prediction 
         self.pred_state = A @ self.state + B * u + G
@@ -74,13 +75,31 @@ class DroneKF:
         R = np.array([meas_var])
         
         # calculate Kalman Gain 
-        
+        SigmaXCT = self.pred_state_cov @ C.T 
+        CSigmaXCT = C @ SigmaXCT 
+        K = SigmaXCT @ np.linalg.inv(CSigmaXCT + R)
+
+        # innovation 
+        z = np.array([[z_alt]])
+        self.state = self.pred_state + K @ (z - (C @ self.pred_state))
+        self.state_cov = (np.eye(len(self.state)) - K @ C) @ self.pred_state_cov
 
     def _skip_measure(self):
         pass
 
+    def advance_filter(self, time_stamp, thrust, z_alt):
+        meas_var = self.measure_var
+        self._predict(time_stamp, thrust)
+        self._measure(z_alt, meas_var)
 
-    
+    def peek_altitude(self):
+        return float(self.state[0,0])
+
+    def peek_velocity(self):
+        return float(self.state[1,0])
+
+    def get_state(self):
+        return self.state.copy(), self.state_cov.copy()
 
 
 def main():
