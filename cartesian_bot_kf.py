@@ -120,11 +120,4 @@ class CartesianBotKF:
     def get_state(self):
         return self.state, self.state_cov
     
-    def peek_altitude(self):
-        return float(self.state[0,0])
-
-    def peek_velocity(self):
-        return float(self.state[1,0])
-
-    def get_state(self):
-        return self.state.copy(), self.state_cov.copy()
+    

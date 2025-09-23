@@ -1,14 +1,14 @@
 import numpy as np 
 import math 
+import matplotlib.pyplot as plt 
 
 # using this for thrust variance 
 default_var = 0.25 
 # meas_var = np.random.uniform(0.01, 0.5) # m^2 
 default_time_step = 1/200  # based on 200 Hz 
-sim_time = 5 
 
 class DroneKF:
-    def __init__(self, mass: float = 0.25, thrust = 2.7, thrust_var = default_var):
+    def __init__(self, mass = 0.25, thrust = 2.7, thrust_var = default_var):
         self.mass = mass
         self.thrust = thrust 
         self.state = np.zeros((2,1))
@@ -16,6 +16,7 @@ class DroneKF:
         self.pred_state = np.zeros_like(self.state)
         self.pred_state_cov = np.identity(len(self.state)) * default_var
         self.measure_var = np.random.uniform(0.01, 0.5)
+        self.thrust_var = thrust_var
         self.time = None 
 
     def set_state(self, time_stamp, altitude, velocity):
@@ -85,7 +86,8 @@ class DroneKF:
         self.state_cov = (np.eye(len(self.state)) - K @ C) @ self.pred_state_cov
 
     def _skip_measure(self):
-        pass
+        self.state = self.predicted_state
+        self.state_cov = np.identity(len(self.state)) * default_var
 
     def advance_filter(self, time_stamp, thrust, z_alt):
         meas_var = self.measure_var
@@ -101,6 +103,15 @@ class DroneKF:
     def get_state(self):
         return self.state.copy(), self.state_cov.copy()
 
+    def simulate_system(self, time_stamp):
+        self._predict(time_stamp, self.thrust, self.thrust_var)
+        self._skip_measure()
+
+    def get_estimate(self):
+        z = self.C_matrix() @ self.state
+        z_cov = self.C_matrix() @ self.state_cov @ self.C_matrix().transpose()
+        return z, z_cov
+
 
 def main():
-    Drone = DroneKF()
+    pass 
